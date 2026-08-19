@@ -80,12 +80,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verify Email — PaddleGround</title>
 <style>
+    /* ---------- Brand palette (unified green, sage background) ----------
+       Matches login.php / register.php / forgot_password.php / reset_password.php */
+    :root {
+        --brand-green: #16A34A;
+        --brand-green-dark: #128A3E;
+        --brand-ink: #17301F;
+        --page-bg: #EAF1EC;
+        --card-bg: #FFFFFF;
+        --border-soft: #DDE6E0;
+        --muted: #6B7A70;
+        --field-bg: #F4F7F5;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
         font-family: 'Segoe UI', Arial, sans-serif;
-        background: #0f1420;
-        color: #e5e7eb;
+        background: var(--page-bg);
+        color: var(--brand-ink);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -96,12 +109,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     .auth-card {
         width: 420px;
         max-width: 100%;
-        background: #131a29;
-        border: 1px solid #263042;
+        background: var(--card-bg);
+        border: 1px solid var(--border-soft);
         border-radius: 16px;
         padding: 40px 36px;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 20px 50px -20px rgba(23, 48, 31, 0.18), 0 2px 8px rgba(23, 48, 31, 0.05);
     }
     .auth-card::before {
         content: '';
@@ -110,27 +124,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         right: -60px;
         width: 180px;
         height: 180px;
-        background: radial-gradient(circle, rgba(34,197,94,0.16), transparent 70%);
+        background: radial-gradient(circle, rgba(22,163,74,0.14), transparent 70%);
         pointer-events: none;
     }
 
     .back-link {
         display: inline-block;
-        color: #9ca3af;
+        color: var(--muted);
         text-decoration: none;
         font-size: 13px;
         margin-bottom: 20px;
         position: relative;
         z-index: 1;
     }
-    .back-link:hover { color: #e5e7eb; }
+    .back-link:hover { color: var(--brand-ink); }
 
     .mail-icon {
         width: 52px;
         height: 52px;
         border-radius: 14px;
-        background: rgba(34,197,94,0.12);
-        border: 1px solid rgba(34,197,94,0.35);
+        background: rgba(22,163,74,0.12);
+        border: 1px solid rgba(22,163,74,0.35);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -138,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         margin-bottom: 20px;
         position: relative;
         z-index: 1;
+        color: var(--brand-green-dark);
     }
 
     h2 {
@@ -146,16 +161,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         margin-bottom: 8px;
         position: relative;
         z-index: 1;
+        color: var(--brand-ink);
     }
     .subtitle {
-        color: #9ca3af;
+        color: var(--muted);
         font-size: 14px;
         line-height: 1.5;
         margin-bottom: 26px;
         position: relative;
         z-index: 1;
     }
-    .subtitle b { color: #e5e7eb; }
+    .subtitle b { color: var(--brand-ink); }
 
     .error-box, .info-box {
         font-size: 13px;
@@ -166,20 +182,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         z-index: 1;
     }
     .error-box {
-        background: rgba(248, 113, 113, 0.12);
-        border: 1px solid rgba(248, 113, 113, 0.35);
-        color: #f87171;
+        background: rgba(239, 68, 68, 0.10);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #b91c1c;
     }
     .info-box {
-        background: rgba(34,197,94,0.12);
-        border: 1px solid rgba(34,197,94,0.35);
-        color: #22c55e;
+        background: rgba(34,197,94,0.10);
+        border: 1px solid rgba(34,197,94,0.3);
+        color: #15803d;
     }
 
     .dev-box {
         background: rgba(234, 179, 8, 0.12);
         border: 1px solid rgba(234, 179, 8, 0.4);
-        color: #facc15;
+        color: #92400e;
         font-size: 12px;
         padding: 10px 14px;
         border-radius: 10px;
@@ -193,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     .code-label {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--muted);
         margin-bottom: 10px;
         display: block;
     }
@@ -208,43 +224,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         text-align: center;
         font-size: 20px;
         font-weight: 700;
-        background: #0f1420;
-        border: 1px solid #263042;
-        color: #e5e7eb;
+        background: var(--field-bg);
+        border: 1px solid var(--border-soft);
+        color: var(--brand-ink);
         border-radius: 8px;
     }
     .code-inputs input:focus {
         outline: none;
-        border-color: #22c55e;
+        border-color: var(--brand-green);
+        background: #ffffff;
     }
 
     .submit-btn {
         width: 100%;
-        background: #22c55e;
-        color: #0f1420;
+        background: var(--brand-green);
+        color: #ffffff;
         font-weight: 700;
         font-size: 14px;
         border: none;
         padding: 12px;
         border-radius: 8px;
         cursor: pointer;
+        transition: background-color .15s ease;
     }
-    .submit-btn:hover { filter: brightness(1.08); }
+    .submit-btn:hover { background: var(--brand-green-dark); }
 
     .switch-link {
         text-align: center;
         margin-top: 20px;
         font-size: 13px;
-        color: #9ca3af;
+        color: var(--muted);
         position: relative;
         z-index: 1;
     }
     .switch-link a {
-        color: #22c55e;
+        color: var(--brand-green);
         text-decoration: none;
         font-weight: 600;
     }
     .switch-link a:hover { text-decoration: underline; }
+
+    /* Responsive: phones */
+    @media (max-width: 480px) {
+        .auth-card {
+            padding: 28px 22px;
+        }
+        h2 { font-size: 20px; }
+        .code-inputs input { font-size: 18px; }
+    }
 </style>
 </head>
 <body>
