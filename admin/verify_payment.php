@@ -26,7 +26,7 @@ if (isset($_GET['verify'])) {
     require_once '../PHPMailer/mailer_helper.php';
 
     $infoStmt = $conn->prepare(
-        "SELECT u.email, u.full_name, p.amount, p.method, c.court_name, s.date
+        "SELECT u.email, u.full_name, p.amount, p.method, c.court_name, s.date, s.start_time, s.end_time
          FROM payments p
          JOIN bookings b ON p.booking_id = b.booking_id
          JOIN users u ON b.user_id = u.user_id
@@ -41,10 +41,11 @@ if (isset($_GET['verify'])) {
 
     if ($info) {
         $formattedDate = date('F j, Y', strtotime($info['date']));
+        $formattedTime = date('g:i A', strtotime($info['start_time'])) . ' - ' . date('g:i A', strtotime($info['end_time']));
         $subject = 'PaddleGround: Payment Received';
         $body = "Hi {$info['full_name']},\n\n"
               . "Thank you for your payment, boss! We received ₱" . number_format((float)$info['amount'], 2)
-              . " via " . strtoupper($info['method']) . " for your booking on {$info['court_name']} ({$formattedDate}).\n\n"
+              . " via " . strtoupper($info['method']) . " for your booking on {$info['court_name']} ({$formattedDate}, {$formattedTime}).\n\n"
               . "Your reservation is now confirmed. See you on the court!\n\n"
               . "— PaddleGround Team";
 
@@ -142,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['refund_payment_id']))
     require_once '../PHPMailer/mailer_helper.php';
 
     $infoStmt = $conn->prepare(
-        "SELECT u.email, u.full_name, p.amount, p.method, c.court_name, s.date
+        "SELECT u.email, u.full_name, p.amount, p.method, c.court_name, s.date, s.start_time, s.end_time
          FROM payments p
          JOIN bookings b ON p.booking_id = b.booking_id
          JOIN users u ON b.user_id = u.user_id
@@ -157,9 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['refund_payment_id']))
 
     if ($info) {
         $formattedDate = date('F j, Y', strtotime($info['date']));
+        $formattedTime = date('g:i A', strtotime($info['start_time'])) . ' - ' . date('g:i A', strtotime($info['end_time']));
         $subject = 'PaddleGround: Refund Sent';
         $body = "Hi {$info['full_name']},\n\n"
-              . "Due to rain, your booking on {$info['court_name']} ({$formattedDate}) has been cancelled.\n\n"
+              . "Due to rain, your booking on {$info['court_name']} ({$formattedDate}, {$formattedTime}) has been cancelled.\n\n"
               . "We have refunded ₱" . number_format((float)$info['amount'], 2)
               . " to your " . strtoupper($info['method']) . " account. Please check your account to confirm receipt.\n\n"
               . "We apologize for the inconvenience and hope to see you again soon!\n\n"
