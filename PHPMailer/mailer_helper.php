@@ -1,85 +1,59 @@
 <?php
-require_once __DIR__ . '/src/Exception.php';
-require_once __DIR__ . '/src/PHPMailer.php';
-require_once __DIR__ . '/src/SMTP.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+// Render's network does not reliably allow outbound raw SMTP connections
+// (port 587/465) — confirmed via "Connection timed out (110)" errors.
+// This version sends email over HTTPS using Brevo's transactional email
+// API instead, which works fine from Render.
+//
+// Requires two environment variables (set in Render dashboard):
+//   BREVO_API_KEY   - from Brevo: Settings -> SMTP & API -> API Keys
+//   MAIL_USERNAME   - the sender email address, must be a "Verified Sender"
+//                     in Brevo: Settings -> Senders, Domains & Dedicated IPs
+//
+// Keeps the exact same function name/signature as before, so nothing in
+// register.php, forgot_password.php, verify_email.php, verify_payment.php,
+// etc. needs to change.
 
 function send_smtp_mail(string $toEmail, string $toName, string $subject, string $bodyText): bool {
-    $configPath = __DIR__ . '/mail_config.php';
+    $apiKey = getenv('BREVO_API_KEY') ?: '';
+    $fromEmail = getenv('MAIL_USERNAME') ?: '';
+    $fromName  = getenv('MAIL_FROM_NAME') ?: 'PaddleGround';
 
-    if (!file_exists($configPath)) {
-        error_log("Mailer Error: mail_config.php is missing. Create it with your Gmail credentials.");
+    if ($apiKey === '' || $fromEmail === '') {
+        error_log("Mailer Error: BREVO_API_KEY or MAIL_USERNAME environment variable is missing.");
         return false;
     }
 
-    $config = require $configPath;
+    $payload = json_encode([
+        'sender'      => ['name' => $fromName, 'email' => $fromEmail],
+        'to'          => [['email' => $toEmail, 'name' => $toName]],
+        'subject'     => $subject,
+        'textContent' => $bodyText,
+    ]);
 
-    $username = trim($config['smtp_username'] ?? '');
-    $password = str_replace(' ', '', trim($config['smtp_password'] ?? ''));
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => [
+            'accept: application/json',
+            'api-key: ' . $apiKey,
+            'content-type: application/json',
+        ],
+        CURLOPT_TIMEOUT        => 10, // fail fast instead of hanging
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
 
-    if ($username === '' || $password === '') {
-        error_log("Mailer Error: smtp_username or smtp_password is empty in mail_config.php.");
-        return false;
-    }
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
 
-    if (strlen($password) !== 16) {
-        error_log("Mailer Warning: SMTP password is " . strlen($password) . " chars — expected 16. Check mail_config.php for a copy-paste mistake.");
-    }
-
-    $mail = new PHPMailer(true);
-
-    try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $username;
-        $mail->Password   = $password;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
-
-        // IMPORTANT: without these, a blocked/slow outbound connection
-        // (common on PaaS hosts like Render) makes PHP hang indefinitely
-        // instead of failing with a clear error. Timeout is in seconds.
-        $mail->Timeout       = 10;
-        $mail->SMTPKeepAlive = false;
-
-        // Log exactly what SMTP is doing to error_log (not echoed to the
-        // browser) — check this via Render's Logs tab to see the real
-        // failure reason (auth error vs connection refused vs timeout).
-        $mail->SMTPDebug   = 2; // 2 = client + server messages
-        $mail->Debugoutput = function ($str, $level) {
-            error_log("SMTP DEBUG [{$level}]: {$str}");
-        };
-
-        $mail->SMTPOptions = [
-            'ssl' => [
-                'verify_peer'       => false,
-                'verify_peer_name'  => false,
-                'allow_self_signed' => true,
-            ]
-        ];
-
-        $mail->setFrom($username, $config['from_name'] ?? 'PaddleGround');
-        $mail->addAddress($toEmail, $toName);
-
-        $mail->isHTML(false);
-        $mail->Subject = $subject;
-        $mail->Body    = $bodyText;
-
-        $mail->send();
+    // Brevo returns 201 Created on success
+    if ($httpCode === 201) {
         return true;
-
-    } catch (Exception $e) {
-        $errorMsg = $mail->ErrorInfo;
-        // Render's filesystem is read-only outside a few writable dirs, so
-        // writing to a local mail_error.log file fails there (and a failed
-        // file_put_contents() prints a warning that can break header()
-        // redirects downstream). error_log() alone is enough — it shows up
-        // in Render's Logs tab.
-        error_log("Mailer Error: {$errorMsg}");
-
-        return false;
     }
+
+    error_log("Mailer Error: Brevo API call failed. HTTP {$httpCode}. cURL error: {$curlError}. Response: {$response}");
+    return false;
 }
