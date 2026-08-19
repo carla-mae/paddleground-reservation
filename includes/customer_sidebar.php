@@ -150,22 +150,26 @@ $activePage = $activePage ?? '';
         stroke-linejoin: round;
     }
 
-    .signout {
+    /* Logout: plain link with a top divider, matching the admin/staff
+       sidebar style, instead of a filled green button. */
+    .logout {
         margin-top: 12px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border-soft);
+    }
+    .logout a {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
-        background: var(--brand-green);
-        color: #ffffff;
-        font-weight: 700;
-        text-decoration: none;
-        padding: 14px;
+        gap: 12px;
+        padding: 12px 14px;
         border-radius: 8px;
+        color: #3f4b45;
+        text-decoration: none;
+        font-size: 15px;
         white-space: nowrap;
-        transition: filter 0.15s ease;
+        transition: background 0.15s ease, color 0.15s ease;
     }
-    .signout:hover { filter: brightness(1.08); }
+    .logout a:hover { background: var(--page-bg); color: var(--brand-ink); }
 
     /* ---------- Backdrop (mobile overlay dimmer) ---------- */
     .sidebar-backdrop {
@@ -326,11 +330,13 @@ $activePage = $activePage ?? '';
             </a></li>
         </ul>
 
-        <a href="../auth/logout.php" class="signout">
-            <span class="nav-icon" style="color: inherit;">
-                <svg viewBox="0 0 24 24"><path d="M9 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/><path d="M16 16l4-4-4-4"/><path d="M20 12H9"/></svg>
-            </span> Log Out
-        </a>
+        <div class="logout">
+            <a href="../auth/logout.php">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M9 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/><path d="M16 16l4-4-4-4"/><path d="M20 12H9"/></svg>
+                </span> Log Out
+            </a>
+        </div>
     </div>
 </div>
 <script>
