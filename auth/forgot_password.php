@@ -1,4 +1,7 @@
 <?php
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
 // Based on the folder structure shown (PHPMailer/ sits at project root next
 // to auth/, staff/, config/, etc.), so from auth/ we go up one level.
 include '../config/db.php';
