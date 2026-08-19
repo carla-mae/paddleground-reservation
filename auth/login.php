@@ -1,7 +1,4 @@
 <?php
-if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-    $_SERVER['HTTPS'] = 'on';
-}
 // Keep the cookie/session params IDENTICAL to session_check.php. If these
 // differ between the login page and every other page, the session cookie
 // the browser stores at login may not match what later pages expect —
@@ -395,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <a href="forgot_password.php">Forgot password?</a>
             </div>
 
-            <button type="submit" class="btn-submit">Sign In</button>
+            <button type="submit" class="btn-submit">Log In</button>
         </form>
 
         <div class="auth-footer">
