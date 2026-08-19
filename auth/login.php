@@ -318,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <polyline points="20 6 9 17 4 12"/>
             </svg>
         </div>
-        <h2>Successfully signed in!</h2>
+        <h2>Successfully logged in!</h2>
         <p><span class="redirect-spinner"></span> Redirecting...</p>
     </div>
     <script>
