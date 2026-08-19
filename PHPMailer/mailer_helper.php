@@ -39,6 +39,20 @@ function send_smtp_mail(string $toEmail, string $toName, string $subject, string
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
 
+        // IMPORTANT: without these, a blocked/slow outbound connection
+        // (common on PaaS hosts like Render) makes PHP hang indefinitely
+        // instead of failing with a clear error. Timeout is in seconds.
+        $mail->Timeout       = 10;
+        $mail->SMTPKeepAlive = false;
+
+        // Log exactly what SMTP is doing to error_log (not echoed to the
+        // browser) — check this via Render's Logs tab to see the real
+        // failure reason (auth error vs connection refused vs timeout).
+        $mail->SMTPDebug   = 2; // 2 = client + server messages
+        $mail->Debugoutput = function ($str, $level) {
+            error_log("SMTP DEBUG [{$level}]: {$str}");
+        };
+
         $mail->SMTPOptions = [
             'ssl' => [
                 'verify_peer'       => false,
@@ -59,13 +73,12 @@ function send_smtp_mail(string $toEmail, string $toName, string $subject, string
 
     } catch (Exception $e) {
         $errorMsg = $mail->ErrorInfo;
+        // Render's filesystem is read-only outside a few writable dirs, so
+        // writing to a local mail_error.log file fails there (and a failed
+        // file_put_contents() prints a warning that can break header()
+        // redirects downstream). error_log() alone is enough — it shows up
+        // in Render's Logs tab.
         error_log("Mailer Error: {$errorMsg}");
-
-        file_put_contents(
-            __DIR__ . '/mail_error.log',
-            date('Y-m-d H:i:s') . " - ERROR - " . $errorMsg . "\n",
-            FILE_APPEND
-        );
 
         return false;
     }
