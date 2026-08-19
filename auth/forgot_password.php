@@ -1,7 +1,4 @@
 <?php
-if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-    $_SERVER['HTTPS'] = 'on';
-}
 // Based on the folder structure shown (PHPMailer/ sits at project root next
 // to auth/, staff/, config/, etc.), so from auth/ we go up one level.
 include '../config/db.php';
@@ -213,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <?php endif; ?>
 
         <div class="auth-footer">
-            <a href="login.php">Back to Sign In</a>
+            <a href="login.php">Back to Log In</a>
         </div>
     </div>
 
