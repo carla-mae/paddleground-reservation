@@ -329,7 +329,7 @@ $activePage = $activePage ?? '';
         <a href="../auth/logout.php" class="signout">
             <span class="nav-icon" style="color: inherit;">
                 <svg viewBox="0 0 24 24"><path d="M9 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/><path d="M16 16l4-4-4-4"/><path d="M20 12H9"/></svg>
-            </span> Sign Out
+            </span> Log Out
         </a>
     </div>
 </div>
