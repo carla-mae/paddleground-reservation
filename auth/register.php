@@ -296,12 +296,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <form method="POST">
         <div class="field">
             <label for="full_name">Full Name</label>
-            <input type="text" id="full_name" name="full_name" placeholder="Juan Dela Cruz"
+            <input type="text" id="full_name" name="full_name"
                    value="<?= htmlspecialchars($full_name) ?>" required>
         </div>
         <div class="field">
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="you@example.com"
+            <input type="email" id="email" name="email"
                    value="<?= htmlspecialchars($email) ?>" required>
         </div>
         <div class="field">
