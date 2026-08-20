@@ -112,7 +112,6 @@ $activePage = $activePage ?? '';
         display: flex;
         flex-direction: column;
         gap: 6px;
-        flex-grow: 1;
     }
     .nav-links li a {
         display: flex;
@@ -153,7 +152,7 @@ $activePage = $activePage ?? '';
     /* Logout: plain link with a top divider, matching the admin/staff
        sidebar style, instead of a filled green button. */
     .logout {
-        margin-top: 12px;
+        margin-top: 28px;
         padding-top: 18px;
         border-top: 1px solid var(--border-soft);
     }
