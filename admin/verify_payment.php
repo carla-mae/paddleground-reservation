@@ -232,6 +232,44 @@ $payments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     h2 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
     .subtitle { color: var(--muted); margin-bottom: 28px; }
 
+    /* ---------- Search bar ---------- */
+    .search-bar-wrap {
+        max-width: 1200px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    .search-bar-wrap svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: var(--muted);
+    }
+    #paymentSearchInput {
+        width: 100%;
+        max-width: 360px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-soft);
+        color: var(--brand-ink);
+        border-radius: 10px;
+        padding: 11px 14px 11px 40px;
+        font-size: 14px;
+        font-family: inherit;
+    }
+    #paymentSearchInput:focus {
+        outline: none;
+        border-color: var(--brand-green);
+        box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+    }
+    .no-search-results {
+        display: none;
+        max-width: 1200px;
+        color: var(--muted);
+        font-size: 14px;
+        padding: 20px 4px;
+    }
+
     table {
         width: 100%;
         max-width: 1200px;
@@ -526,6 +564,8 @@ $payments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
         h2 { font-size: 22px; }
         .subtitle { font-size: 13.5px; margin-bottom: 20px; }
 
+        #paymentSearchInput { max-width: none; font-size: 16px; padding: 12px 14px 12px 40px; }
+
         .date-group, table { max-width: none; }
         .date-header { padding: 12px 16px; font-size: 14px; }
 
@@ -596,6 +636,18 @@ $payments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     <?php if (empty($payments)): ?>
         <p class="empty-state">No payments have been submitted yet.</p>
     <?php else: ?>
+        <!-- Search bar: filters the visible rows below by customer name as the
+             admin types. Purely client-side (no page reload) since all payments
+             are already loaded on this page. -->
+        <div class="search-bar-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="paymentSearchInput" placeholder="Search by customer name..." oninput="filterPayments()" autocomplete="off">
+        </div>
+        <p class="no-search-results" id="noSearchResults">No customers match your search.</p>
+
         <?php
             $groups = [];
             foreach ($payments as $row) {
@@ -624,7 +676,7 @@ $payments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
                         <td colspan="6"><?= htmlspecialchars($courtName) ?></td>
                     </tr>
                     <?php foreach ($courtRows as $row): ?>
-                    <tr>
+                    <tr class="payment-row">
                         <td data-label="Customer"><?= htmlspecialchars($row['full_name']) ?></td>
                         <td data-label="Method"><span class="method-tag"><?= htmlspecialchars($row['method']) ?></span></td>
                         <td data-label="Amount">&#8369;<?= number_format((float)$row['amount'], 2) ?></td>
@@ -807,6 +859,63 @@ document.getElementById('refundPreviewRemove').addEventListener('click', functio
     document.getElementById('refundPreviewBox').classList.remove('visible');
     document.getElementById('refundPreviewThumb').src = '';
 });
+
+// ---------- Search by customer name ----------
+// Filters payment rows across all date-groups by the customer name cell.
+// A court-divider row hides itself when none of its rows match, and an
+// entire date-group hides itself when it has no matching rows left.
+function filterPayments() {
+    const searchInput = document.getElementById('paymentSearchInput');
+    if (!searchInput) return;
+
+    const query = searchInput.value.trim().toLowerCase();
+    const dateGroups = document.querySelectorAll('.date-group');
+    let anyVisible = false;
+
+    dateGroups.forEach(function (group) {
+        let groupHasVisibleRow = false;
+        let currentDivider = null;
+        let currentDividerHasVisible = false;
+
+        const rows = group.querySelectorAll('table tr');
+        rows.forEach(function (row) {
+            if (row.classList.contains('court-divider-row')) {
+                if (currentDivider) {
+                    currentDivider.style.display = currentDividerHasVisible ? '' : 'none';
+                }
+                currentDivider = row;
+                currentDividerHasVisible = false;
+                return;
+            }
+            if (!row.classList.contains('payment-row')) {
+                // header row — leave as is
+                return;
+            }
+
+            const nameCell = row.querySelector('[data-label="Customer"]');
+            const name = nameCell ? nameCell.textContent.trim().toLowerCase() : '';
+            const matches = query === '' || name.includes(query);
+
+            row.style.display = matches ? '' : 'none';
+            if (matches) {
+                currentDividerHasVisible = true;
+                groupHasVisibleRow = true;
+            }
+        });
+
+        if (currentDivider) {
+            currentDivider.style.display = currentDividerHasVisible ? '' : 'none';
+        }
+
+        group.style.display = groupHasVisibleRow ? '' : 'none';
+        if (groupHasVisibleRow) anyVisible = true;
+    });
+
+    const noResultsEl = document.getElementById('noSearchResults');
+    if (noResultsEl) {
+        noResultsEl.style.display = (!anyVisible && query !== '') ? 'block' : 'none';
+    }
+}
 </script>
 
 </body>
