@@ -128,10 +128,17 @@ $result = $stmt->get_result();
 $rows = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// Total Revenue only counts APPROVED bookings — cancelled bookings (even if
+// a payment record exists for them, e.g. refund/void cases) must not be
+// added to the revenue figure. Total Bookings still counts every row shown
+// in the table (approved + cancelled that aren't customer-cancelled), so
+// the "3 bookings" count on screen doesn't change — only the revenue math.
 $total = 0;
 $totalBookings = count($rows);
 foreach ($rows as $r) {
-    $total += (float) ($r['amount'] ?? 0);
+    if ($r['status'] === 'approved') {
+        $total += (float) ($r['amount'] ?? 0);
+    }
 }
 
 // ---------- Per-court breakdown (Yearly view only) ----------
@@ -139,9 +146,11 @@ foreach ($rows as $r) {
 // the admin compare all courts side by side for the selected year.
 $courtBreakdown = [];
 if ($period === 'yearly') {
+    // Same rule as the main total above: only approved bookings contribute
+    // to the revenue sum. Cancelled bookings still count toward "bookings".
     $courtSql = "SELECT c.court_id, c.court_name,
                         COUNT(b.booking_id) AS bookings,
-                        COALESCE(SUM(p.amount), 0) AS revenue
+                        COALESCE(SUM(CASE WHEN b.status = 'approved' THEN p.amount ELSE 0 END), 0) AS revenue
                  FROM bookings b
                  JOIN schedules s ON b.schedule_id = s.schedule_id
                  JOIN courts c ON s.court_id = c.court_id
