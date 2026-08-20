@@ -631,7 +631,18 @@ $payments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
                         <td class="time-cell" data-label="Time"><?= date('g:i A', strtotime($row['start_time'])) ?> - <?= date('g:i A', strtotime($row['end_time'])) ?></td>
                         <td data-label="Receipt">
                             <?php if (!empty($row['receipt_path'])): ?>
-                                <a class="receipt-link" href="../<?= htmlspecialchars($row['receipt_path']) ?>" target="_blank">View &rarr;</a>
+                                <?php
+                                // New receipts store a full Cloudinary URL (https://...),
+                                // so it must be used as-is. Older receipts (uploaded
+                                // before the Cloudinary switch) stored a local relative
+                                // path and still need the "../" prefix — those will 404
+                                // since Render's local disk doesn't persist files across
+                                // deploys, but this keeps the markup from breaking either way.
+                                $receiptUrl = $row['receipt_path'];
+                                $isAbsoluteUrl = (strpos($receiptUrl, 'http://') === 0 || strpos($receiptUrl, 'https://') === 0);
+                                $receiptHref = $isAbsoluteUrl ? $receiptUrl : ('../' . $receiptUrl);
+                            ?>
+                            <a class="receipt-link" href="<?= htmlspecialchars($receiptHref) ?>" target="_blank">View &rarr;</a>
                             <?php else: ?>
                                 <span class="no-receipt">Cash — no receipt</span>
                             <?php endif; ?>

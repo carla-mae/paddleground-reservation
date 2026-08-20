@@ -38,6 +38,51 @@ $gcashName      = get_setting($conn, 'gcash_name', 'Carla Verzosa');
 $maribankNumber = get_setting($conn, 'maribank_number', '0389 648 378');
 $maribankName   = get_setting($conn, 'maribank_name', 'Carla Verzosa');
 
+// Render's disk is ephemeral — anything saved locally (uploads/receipts/)
+// disappears on the next redeploy/restart, which is why old receipt links
+// eventually 404. Receipts are now uploaded to Cloudinary instead, so the
+// stored receipt_path is a permanent https:// URL that survives redeploys.
+//
+// Requires two environment variables (set in Render dashboard):
+//   CLOUDINARY_CLOUD_NAME   - from Cloudinary dashboard home page
+//   CLOUDINARY_UPLOAD_PRESET - an "unsigned" upload preset you create in
+//                              Cloudinary: Settings -> Upload -> Add upload preset
+function upload_receipt_to_cloud(string $tmpFilePath): ?string {
+    $cloudName = getenv('CLOUDINARY_CLOUD_NAME') ?: '';
+    $uploadPreset = getenv('CLOUDINARY_UPLOAD_PRESET') ?: '';
+
+    if ($cloudName === '' || $uploadPreset === '') {
+        error_log('Receipt upload error: CLOUDINARY_CLOUD_NAME or CLOUDINARY_UPLOAD_PRESET env var is missing.');
+        return null;
+    }
+
+    $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloudName}/auto/upload");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => [
+            'file'           => new CURLFile($tmpFilePath),
+            'upload_preset'  => $uploadPreset,
+            'folder'         => 'paddleground_receipts',
+        ],
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($httpCode !== 200) {
+        error_log("Receipt upload error: Cloudinary HTTP {$httpCode}. cURL error: {$curlError}. Response: {$response}");
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    return $data['secure_url'] ?? null;
+}
+
 // ---------- Handle POST actions: confirm_pay (confirm + pay combined) or cancel ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action     = $_POST['action'] ?? '';
@@ -113,16 +158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $respond_error('Receipt file is too large (max 5MB).');
         }
 
-        $destDir = '../uploads/receipts/';
-        if (!is_dir($destDir)) { mkdir($destDir, 0755, true); }
+        $receiptPath = upload_receipt_to_cloud($_FILES['receipt']['tmp_name']);
 
-        $filename = 'receipt_' . $booking_id . '_' . time() . '.' . $ext;
-        $destPath = $destDir . $filename;
-
-        if (!move_uploaded_file($_FILES['receipt']['tmp_name'], $destPath)) {
+        if ($receiptPath === null) {
             $respond_error('Failed to upload receipt. Please try again.');
         }
-        $receiptPath = 'uploads/receipts/' . $filename;
 
         $conn->begin_transaction();
         try {
@@ -201,16 +241,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $respond_error('Receipt file is too large (max 5MB).');
         }
 
-        $destDir = '../uploads/receipts/';
-        if (!is_dir($destDir)) { mkdir($destDir, 0755, true); }
+        $receiptPath = upload_receipt_to_cloud($_FILES['receipt']['tmp_name']);
 
-        $filename = 'receipt_' . $booking_id . '_' . time() . '.' . $ext;
-        $destPath = $destDir . $filename;
-
-        if (!move_uploaded_file($_FILES['receipt']['tmp_name'], $destPath)) {
+        if ($receiptPath === null) {
             $respond_error('Failed to upload receipt. Please try again.');
         }
-        $receiptPath = 'uploads/receipts/' . $filename;
 
         $upd = $conn->prepare(
             "UPDATE payments SET receipt_path = ?, verified = 0, verified_by = NULL WHERE payment_id = ?"
